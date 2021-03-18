@@ -2,16 +2,16 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: spire-ingress
-  namespace: spire
+  namespace: tornjak
 spec:
   tls:
     - hosts:
         # TODO: Replace MY_DISCOVERY_DOMAIN with the FQDN of the Discovery Provider that you will configure in DNS
-        - MY_DISCOVERY_DOMAIN
+        - oidc-discovery.tsi-roks02-5240a919746a818fd9d58aa25c34ecfe-0000.eu-de.containers.appdomain.cloud
       secretName: oidc-secret
   rules:
     # TODO: Replace MY_DISCOVERY_DOMAIN with the FQDN of the Discovery Provider that you will configure in DNS
-    - host: MY_DISCOVERY_DOMAIN
+    - host: oidc-discovery.tsi-roks02-5240a919746a818fd9d58aa25c34ecfe-0000.eu-de.containers.appdomain.cloud
       http:
         paths:
           - path: /.well-known/openid-configuration
