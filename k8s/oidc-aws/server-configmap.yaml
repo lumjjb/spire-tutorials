@@ -15,20 +15,16 @@ data:
       experimental {
         // Turns on the bundle endpoint (required, true)
         bundle_endpoint_enabled = true
- 
         // The address to listen on (optional, defaults to 0.0.0.0)
         // bundle_endpoint_address = "0.0.0.0"
- 
         // The port to listen on (optional, defaults to 443)
         bundle_endpoint_port = 8443
       } 
       #AWS requires the use of RSA.  EC cryptography is not supported
       ca_key_type = "rsa-2048"
-
       # Creates the iss claim in JWT-SVIDs.
       # TODO: Replace MY_DISCOVERY_DOMAIN with the FQDN of the Discovery Provider that you will configure in DNS
       jwt_issuer = "https://oidc-tornjak.tsi-roks02-5240a919746a818fd9d58aa25c34ecfe-0000.eu-de.containers.appdomain.cloud"
-
       default_svid_ttl = "1h"
       ca_subject = {
         country = ["US"],
@@ -36,7 +32,6 @@ data:
         common_name = "",
       }
     }
-
     plugins {
       DataStore "sql" {
         plugin_data {
@@ -44,30 +39,27 @@ data:
           connection_string = "/run/spire/data/datastore.sqlite3"
         }
       }
-
-      NodeAttestor "k8s_sat" {
+      NodeAttestor "k8s_psat" {
         plugin_data {
           clusters = {
             "tsi-roks02" = {
-              use_token_review_api_validation = true
+             # use_token_review_api_validation = true
               service_account_whitelist = ["spire:spire-agent"]
             }
           }
         }
       }
-
       NodeResolver "noop" {
         plugin_data {}
       }
-
       KeyManager "disk" {
         plugin_data {
           keys_path = "/run/spire/data/keys.json"
         }
       }
-
       Notifier "k8sbundle" {
         plugin_data {
+          namespace = "tornjak"
         }
       }
     }
