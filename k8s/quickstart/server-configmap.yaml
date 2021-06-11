@@ -4,11 +4,95 @@ metadata:
   name: spire-server
   namespace: spire
 data:
+  permissions.json: |
+    {
+    "bindings": [
+        {
+            "namespace": "spiffe://example.org/stateless/",
+            "role": "registrar",
+            "user": "spiffe://example.org/schedulers/stateless"
+        },
+        {
+            "namespace": "spiffe://example.org/batch/",
+            "role": "registrar",
+            "user": "spiffe://example.org/schedulers/batch"
+        }
+    ],
+    "roles": [
+        {
+            "full_method": "/spire.api.server.entry.v1.Entry/BatchCreateEntry",
+            "name": "registrar",
+            "pass": false
+        },
+        {
+            "full_method": "/spire.api.server.entry.v1.Entry/ListEntries",
+            "name": "list-entry",
+            "pass": false
+        }
+    ]
+    }
+  policy.rego: |
+    package spire
+
+    result = {"allow": allow, "pass": pass}
+    default allow = false 
+    default pass = true
+
+    # This rule checks if there is an admin flag set on entries being created
+    registrar_check_admin_flag {
+        role_name := "registrar"
+
+        #not input.req.entries[_].admin
+        admin_entries := {app | app := input.req.entries[_]; app.admin == true}
+        count(admin_entries) == 0
+    }
+
+    list_entry_rule {
+        role_name := "list-entry"
+
+        r = data.roles[_]
+        r.name = role_name
+        r.full_method == input.full_method 
+    }
+
+    # For list entry
+    allow = true {
+        list_entry_rule
+    }
+
+    # For create entry
+    allow = true {
+        registrar_check_admin_flag
+    }
+
+    pass = false {
+        r = data.roles[_]
+        r.full_method = input.full_method
+        r.pass == false
+    }
+
+    #allow {    
+    #    role_name := "registrar"
+    #
+    #    # caller has the registrar role
+    #    b := data.bindings[_]
+    #    b.role = role_name
+    #    b.user = input.caller
+    #
+    #    # role has permission
+    #    r = data.roles[_]
+    #    r.name = role_name
+    #    r.full_method = input.full_method
+    #
+    #    # spiffe id to be registered is in correct namespace
+    #    re_match(b.namespace, input.req.spiffe_id)
+    #}
+
   server.conf: |
     server {
       bind_address = "0.0.0.0"
       bind_port = "8081"
-      registration_uds_path = "/tmp/spire-registration.sock"
+      # socket_path = "/tmp/spire-registration.sock"
       trust_domain = "example.org"
       data_dir = "/run/spire/data"
       log_level = "DEBUG"
@@ -20,6 +104,12 @@ data:
         country = ["US"],
         organization = ["SPIFFE"],
         common_name = "",
+      }
+      policy_engine = {
+        file_provider = {
+            policy_path = "/run/spire/config/policy.rego"
+            permissions_path = "/run/spire/config/permissions.json"
+        }
       }
     }
 
